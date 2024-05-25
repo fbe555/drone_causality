@@ -1,0 +1,20 @@
+{
+    "name": "Drone Causality Development Container",
+    "image": "dolphonie1/causal_repo:0.1.17",
+    "privileged": true,
+    "customizations": {
+        "vscode": {
+            "extensions":[
+                "ms-python.python"
+            ]
+        }
+    },
+    "containerEnv": {
+        "DISPLAY": "unix:0",
+    },
+    "runArgs": [
+        "--net=host",
+        "-e", "DISPLAY=${env:DISPLAY}"
+    ],
+    "postCreateCommand": "apt-get install -qqy x11-apps"
+}   
