@@ -93,7 +93,7 @@ def save_processsed_seq(out_path: str, out_seq: Sequence[Image.Image], control_i
         processed = process_image(aug_img, flip_channels=flip_channels)
         processed.save(os.path.join(out_path, f"{str(i).zfill(6)}.png"))
 
-    control_inputs.to_csv(os.path.join(out_path, "data_out.csv"), index=False)
+    control_inputs.to_csv(os.path.join(out_path, "control.csv"), index=False)
 
 
 def zoom_at(img: Image.Image, x: int, y: int, zoom: float) -> Image.Image:

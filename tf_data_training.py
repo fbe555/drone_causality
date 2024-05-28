@@ -1,8 +1,9 @@
-#!/usr/bin/env python3
 import functools
 import os
 from pathlib import Path
 from typing import List, Dict, Any
+import pickle as pkl
+import pandas as pd
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -101,10 +102,10 @@ def train_model(model_params: ModelParams, data_dir: str = "./data", cached_data
                 with open(dataset_spec, "w") as f:
                     f.write(repr(training_dataset.element_spec))
 
-        print('\n\nTraining Dataset Size: %d\n\n' % tlen(training_dataset))
+        # print('\n\nTraining Dataset Size: %d\n\n' % tlen(training_dataset))
         training_dataset = training_dataset.shuffle(100).batch(batch_size)
         # handle sequence augmentations differently
-        seq_params = model_params.augmentation_params.get("sequence_params", None)
+        seq_params = model_params.augmentation_params.get("sequence_params", None) if model_params.augmentation_params is not None else None 
         if isinstance(seq_params, dict):
             print("Performing sequence aug on training dataset")
             seq_aug_fn = functools.partial(sequence_augmentation, aug_params=seq_params)
@@ -131,10 +132,10 @@ def train_model(model_params: ModelParams, data_dir: str = "./data", cached_data
     else:
         raise Exception('Unsupported optimizer type %s' % opt)
 
-    time_str = time.strftime("%Y:%m:%d:%H:%M:%S")
+    time_str = time.strftime("%Y%m%d%H%M%S")
 
     file_path = os.path.join(save_dir, 'model-%s_seq-%d_lr-%f_epoch-{epoch:03d}'
-                                       '_val-loss:{val_loss:.4f}_train-loss:{loss:.4f}_mse:{mse:.4f}_%s.hdf5' % (
+                                       '_val-loss-{val_loss:.4f}_train-loss-{loss:.4f}_mse-{mse:.4f}_%s.hdf5' % (
                                  get_readable_name(model_params), model_params.seq_len, lr, time_str))
 
     checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=file_path, save_weights_only=True,
@@ -161,7 +162,7 @@ def train_model(model_params: ModelParams, data_dir: str = "./data", cached_data
     # Train
     history = model.fit(x=training_dataset, validation_data=validation_dataset, epochs=epochs,
                         use_multiprocessing=False, workers=1, max_queue_size=5, verbose=1, callbacks=callbacks)
-    return history, time_str
+    return model, history, time_str
 
 
 if __name__ == "__main__":
@@ -229,8 +230,12 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Passed in illegal model type {args.model_type}")
 
-    train_model(data_dir=args.data_dir, epochs=args.epochs, val_split=args.val_split,
-                opt=args.opt, lr=args.lr, data_shift=args.data_shift, data_stride=args.data_stride,
-                batch_size=args.batch_size, save_dir=args.save_dir, hotstart=args.hotstart, momentum=args.momentum,
-                cached_data_dir=args.cached_data_dir, label_scale=args.label_scale,
-                model_params=model_params_constructed, decay_rate=args.decay_rate)
+    model, hist, t = train_model(data_dir=args.data_dir, epochs=args.epochs, val_split=args.val_split,
+                          opt=args.opt, lr=args.lr, data_shift=args.data_shift, data_stride=args.data_stride,
+                          batch_size=args.batch_size, save_dir=args.save_dir, hotstart=args.hotstart, momentum=args.momentum,
+                          cached_data_dir=args.cached_data_dir, label_scale=args.label_scale,
+                          model_params=model_params_constructed, decay_rate=args.decay_rate)
+    
+    # Save model and history
+    pd.DataFrame(hist.history).to_csv(f"history_{t}.csv")
+    model.save(f"model_{t}.keras")

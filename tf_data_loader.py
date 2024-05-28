@@ -3,15 +3,18 @@ import os
 import numpy as np
 import tensorflow as tf
 from PIL import Image
+import PIL
 from matplotlib.image import imread
 from tqdm import tqdm
+
+OUTPUT_DIM = 6
 
 
 def process_dataset(root, label_scale):
     run_dirs = os.listdir(root)  # should be directories named run%03d
     n = len(run_dirs)
     dataset = np.empty((n, 64, 256, 256, 3), dtype=np.uint8)
-    labels = np.empty((n, 64, 4))
+    labels = np.empty((n, 64, OUTPUT_DIM))
     for (dx, d) in enumerate(run_dirs):
         for i in range(len(os.listdir(os.path.join(root, d))) - 1):
             dataset[dx, i] = imread(os.path.join(root, d, '%03d.jpg' % i))
@@ -35,20 +38,35 @@ def get_output_normalization(root):
         print('Loading training data output means from: %s' % training_output_mean_fn)
         output_means = np.genfromtxt(training_output_mean_fn, delimiter=',')
     else:
-        output_means = np.zeros(4)
+        output_means = np.zeros(OUTPUT_DIM)
 
     training_output_std_fn = os.path.join(root, 'stats', 'training_output_stds.csv')
     if os.path.exists(training_output_std_fn):
         print('Loading training data output std from: %s' % training_output_std_fn)
         output_stds = np.genfromtxt(training_output_std_fn, delimiter=',')
     else:
-        output_stds = np.ones(4)
+        output_stds = np.ones(OUTPUT_DIM)
 
     return output_means, output_stds
+
+def get_data_dirs_recursively(root):
+    """ Get all directories that has a control.csv and a mission_completed.txt file in a folder recursively  """
+    data_dirs = []
+    for (dirpath, subdirs, files) in os.walk(root):
+        if 'control.csv' in files and 'mission_completed.txt' in files:
+            data_dirs.append(dirpath)
+    return data_dirs
+
 
 
 def load_dataset_multi(root, image_size, seq_len, shift, stride, label_scale):
     file_ending = 'png'
+
+    def img_filename(ts):
+        return f"img_{int(ts)}.{file_ending}"
+    
+    def reshaped_img_filename(ts):
+        return f"{image_size[0]}_{image_size[1]}_{img_filename(ts)}"
 
     def sub_to_batch(sub_feature, sub_label):
         sfb = sub_feature.batch(seq_len, drop_remainder=True)
@@ -56,37 +74,40 @@ def load_dataset_multi(root, image_size, seq_len, shift, stride, label_scale):
         return tf.data.Dataset.zip((sfb, slb))
         # return sub.batch(seq_len, drop_remainder=True)
 
-    dirs = sorted(os.listdir(root))
+    dirs = sorted(get_data_dirs_recursively(root))
     dirs = [d for d in dirs if 'cached' not in d and 'stats' not in d]
     datasets = []
 
     output_means, output_stds = get_output_normalization(root)
 
     for (run_number, d) in tqdm(enumerate(dirs)):
-        labels = np.genfromtxt(os.path.join(root, d, 'data_out.csv'), delimiter=',', skip_header=1, dtype=np.float32)
-
-        if labels.shape[1] == 4:
-            labels = (labels - output_means) / output_stds
-            # labels = labels * label_scale
-        elif labels.shape[1] == 5:
-            labels = (labels[:, 1:] - output_means) / output_stds
-            # labels = labels[:,1:] * label_scale
+        labels = np.genfromtxt(os.path.join(d, 'control.csv'), delimiter=',', skip_header=1)
+        file_list = os.listdir(d)
+        # Keep only labels with corresponding images
+        labels = labels[[img_filename(ts) in file_list for ts in labels[:, 0]],:]
+        timestamps = labels[:, 0]
+        labels = labels[:, 1:].astype(np.float32)
+        if labels.shape[1] == OUTPUT_DIM:
+            labels = (labels[:,:] - output_means) / output_stds
         else:
-            raise Exception('Wrong size of input data (expected 4, got %d' % labels.shape[1])
+            raise Exception(f'Wrong size of input data (expected {OUTPUT_DIM}, got {labels.shape[1]:d}')
         labels_dataset = tf.data.Dataset.from_tensor_slices(labels)
-        # n_images = len(os.listdir(os.path.join(root, d))) - 1
-        n_images = len([fn for fn in os.listdir(os.path.join(root, d)) if file_ending in fn])
-        # dataset_np = np.empty((n_images, 256, 256, 3), dtype=np.uint8)
-        dataset_np = np.empty((n_images, *image_size), dtype=np.uint8)
-
-        for ix in range(n_images):
-            # dataset_np[ix] = imread(os.path.join(root, d, '%06d.jpeg' % ix))
-            img = Image.open(os.path.join(root, d, '%06d.%s' % (ix, file_ending)))
-            # dataset_np[ix] = img[img.height - image_size[0]:, :, :]
+        
+        dataset_np = np.empty((len(timestamps), *image_size), dtype=np.uint8)
+        for ix, ts in enumerate(timestamps):
+            if not os.path.exists(os.path.join(d, reshaped_img_filename(ts))):
+                # Perform rescaling on demand
+                img = Image.open(os.path.join(d, img_filename(ts)))
+                img = img.resize((image_size[1], image_size[0]), resample=PIL.Image.BICUBIC)
+                # But save for future use
+                img.save(os.path.join(d, reshaped_img_filename(ts)))
+            else:
+                img = Image.open(os.path.join(d, reshaped_img_filename(ts)))
             dataset_np[ix] = img
-
         images_dataset = tf.data.Dataset.from_tensor_slices(dataset_np)
+
         dataset = tf.data.Dataset.zip((images_dataset, labels_dataset))
+        print(f'Loaded dataset {run_number+1}/{len(dirs)} with {len(dataset)} samples')
         dataset = dataset.window(seq_len, shift=shift, stride=stride, drop_remainder=True).flat_map(sub_to_batch)
         datasets.append(dataset)
 
@@ -166,11 +187,11 @@ def frames_to_array_rnn(root, dirs, image_size, seq_len):
     n_batches = min(int(np.ceil(max_run_length / seq_len)), run_len_threshold)
     data = np.zeros((n_batches, n_runs + total_extra_runs, seq_len, *image_size), dtype=np.uint8)
     full_batch_size = n_runs + total_extra_runs
-    labels = np.zeros((n_batches, full_batch_size, seq_len, 4))
+    labels = np.zeros((n_batches, full_batch_size, seq_len, OUTPUT_DIM))
     print('Data shape: ', data.shape)
     for (ix, dname) in enumerate(dirs):
         print('Loading directory %d of %d (%s)' % (ix, n_runs, dname))
-        label_raw = np.genfromtxt(os.path.join(root, dname, 'data_out.csv'), delimiter=',', skip_header=1)
+        label_raw = np.genfromtxt(os.path.join(root, dname, 'control.csv'), delimiter=',', skip_header=1)
         # for jx in range(run_lengths[ix]):
         for jx in range(max_frame_index[ix]):
             if jx == run_len_threshold:

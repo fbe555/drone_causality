@@ -31,7 +31,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # if not single step, is just sequence of images with shape (batch, seq_len, h, w, c) otherwise
 # output is control output for not single step, for single step it is list of tensors where first element is control
 # output and other outputs are any hidden states required
-# if single_step, control output is (batch, 4), otherwise (batch, seq_len, 4)
+# if single_step, control output is (batch, 6), otherwise (batch, seq_len, 6)
 # if single_step, hidden outputs typically have shape (batch, hidden_dimension)
 
 def generate_lstm_model(
@@ -86,7 +86,7 @@ def generate_lstm_model(
                 recurrent_dropout=recurrent_dropout
             )(x)
 
-    x = keras.layers.Dense(units=4, activation='linear')(x)
+    x = keras.layers.Dense(units=6, activation='linear')(x)
     if single_step:
         lstm_model = keras.Model([inputs_image, *c_inputs, *h_inputs], [x, *c_outputs, *h_outputs])
     else:
@@ -116,7 +116,7 @@ def generate_ncp_model(seq_len,
     wiring = kncp.wirings.NCP(
         inter_neurons=18,  # Number of inter neurons
         command_neurons=12,  # Number of command neurons
-        motor_neurons=4,  # Number of motor neurons
+        motor_neurons=6,  # Number of motor neurons
         sensory_fanout=6,  # How many outgoing synapses has each sensory neuron
         inter_fanout=4,  # How many outgoing synapses has each inter neuron
         recurrent_command_synapses=4,  # Now many recurrent synapses are in the
@@ -199,7 +199,7 @@ def generate_ctrnn_model(rnn_sizes,
             wiring = kncp.wirings.NCP(
                 inter_neurons=18,  # Number of inter neurons
                 command_neurons=12,  # Number of command neurons
-                motor_neurons=4,  # Number of motor neurons
+                motor_neurons=6,  # Number of motor neurons
                 sensory_fanout=6,  # How many outgoing synapses has each sensory neuron
                 inter_fanout=4,  # How many outgoing synapses has each inter neuron
                 recurrent_command_synapses=4,  # Now many recurrent synapses are in the
@@ -234,7 +234,7 @@ def generate_ctrnn_model(rnn_sizes,
                                  stateful=rnn_stateful,
                                  time_major=False)(x)
 
-    x = keras.layers.Dense(units=4, activation='linear')(x)
+    x = keras.layers.Dense(units=6, activation='linear')(x)
     if single_step:
         ctrnn_model = keras.Model([inputs_image, *all_hidden_inputs], [x, *all_hidden_outputs])
     else:
@@ -309,8 +309,8 @@ def generate_tcn_model(
         x = rnn_cell(x)
         # output x shape: (batch, seq, nb_filters)
 
-    # reduce dims of control signal to size 4
-    x = keras.layers.Dense(units=4, activation='linear')(x)
+    # reduce dims of control signal to size 6
+    x = keras.layers.Dense(units=6, activation='linear')(x)
 
     if single_step:
         tcn_model = keras.Model([inputs_image, inputs_sequence], [x, combined_sequence])

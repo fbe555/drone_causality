@@ -30,7 +30,7 @@ def validate_run(run_path: str, processed):
         csv_filename = os.path.join(os.path.dirname(run_path), "..", '%.2f.csv' % float(run_num))
         control_df = pd.read_csv(csv_filename)
     except (FileNotFoundError, ValueError) as e:
-        csv_filename = os.path.join(run_path, "data_out.csv")
+        csv_filename = os.path.join(run_path, "control.csv")
         control_df = pd.read_csv(csv_filename)
 
     # check num imgs = len of csv

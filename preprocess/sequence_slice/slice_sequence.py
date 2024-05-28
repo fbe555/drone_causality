@@ -58,7 +58,7 @@ def slice_sequence(data_path: str, output_path: str):
         ####################################################################################################################
 
         n_seq = len(seq[0])
-        data = pd.read_csv(os.path.join(data_path, flight, 'data_out.csv'))
+        data = pd.read_csv(os.path.join(data_path, flight, 'control.csv'))
 
         for i in range(0, n_seq):
             seq_start = seq[0][i]
@@ -67,7 +67,7 @@ def slice_sequence(data_path: str, output_path: str):
             seq_out_dir = os.path.join(output_path, fname)
             Path(seq_out_dir).mkdir(parents=True, exist_ok=True)
             df = data[seq_start:seq_end]
-            df.to_csv(os.path.join(output_path, fname, 'data_out.csv'), index=False)
+            df.to_csv(os.path.join(output_path, fname, 'control.csv'), index=False)
             # need to loop to renumber images
             for j in range(seq_start, seq_end):
                 os.system(

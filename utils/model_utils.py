@@ -116,7 +116,7 @@ def load_model_no_params(checkpoint_path: str, single_step: bool):
     else:
         raise ValueError(f"Unable to infer model name from path {checkpoint_path}")
 
-    return load_model_from_weights(params, checkpoint_path)
+    return load_model_from_weights(params, checkpoint_path, load_name_ok=True)
 
 
 COMPATIBILITY_REPLACEMENTS = {

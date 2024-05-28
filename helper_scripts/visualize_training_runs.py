@@ -14,7 +14,7 @@ from utils.vis_utils import ARROW_BOX_HEIGHT, show_vel_cmd
 def visualize_run(run_dir: str, output_path: str, csv_path: Optional[str] = None, frame_rate: int = 20,
                   include_control: bool = True):
     if csv_path is None:
-        csv_path = os.path.join(run_dir, "data_out.csv")
+        csv_path = os.path.join(run_dir, "control.csv")
     Path(os.path.dirname(output_path)).mkdir(exist_ok=True, parents=True)
     imgs = sorted(os.listdir(run_dir))
     imgs = [os.path.join(run_dir, img) for img in imgs if "png" in img]

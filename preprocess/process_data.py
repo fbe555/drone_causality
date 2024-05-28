@@ -36,7 +36,7 @@ from keras_models import IMAGE_SHAPE
 #    if not keep:
 #        bad_runs.append(d)
 
-CSV_NAME = "data_out.csv"
+CSV_NAME = "control.csv"
 
 def process_csv(df: DataFrame) -> DataFrame:
     """

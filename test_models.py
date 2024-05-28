@@ -24,7 +24,7 @@ IMAGE_SHAPE = (144, 256, 3)
 
 
 def load_data(data_path: str):
-    labels = np.genfromtxt(os.path.join(data_path, 'data_out.csv'), delimiter=',', skip_header=1)
+    labels = np.genfromtxt(os.path.join(data_path, 'control.csv'), delimiter=',', skip_header=1)
     frames = list(image_dir_generator(data_path, IMAGE_SHAPE))
     frame_stack_np = np.expand_dims(np.stack(frames, axis=0), axis=0)  # stack and add batch dim
     return frame_stack_np, labels

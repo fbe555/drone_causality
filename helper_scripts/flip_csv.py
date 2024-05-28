@@ -13,4 +13,4 @@ def flip_csv(csv_file: str, columns: Sequence[str]):
 
 data = "/home/dolphonie/Desktop/mixed_aug_fixed"
 for folder in os.listdir(data):
-    flip_csv(os.path.join(data, folder, "data_out.csv"), ["vz", "omega_z"])
+    flip_csv(os.path.join(data, folder, "control.csv"), ["vz", "omega_z"])
