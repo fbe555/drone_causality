@@ -10,3 +10,4 @@ python hyperparameter_tuning.py ncp_objective ./training_data/ --n_trials 40 --t
 Note: This had issues, which might not have happened with an even smaller batch size, but this is not certain. 
 
 ## Training:
+python tf_data_training.py --model ncp --data_dir training_data --epochs 100 --seq_len 64 --data_stride 1 --data_shift 16

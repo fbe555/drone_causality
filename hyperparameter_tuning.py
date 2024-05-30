@@ -42,14 +42,18 @@ def optimize_hyperparameters(obj_fn: Callable, data_dir: str, study_name: str, n
         "pruner": MedianPruner(n_warmup_steps=10, n_min_trials=3),
     }
 
+    print(f"optuna study paramsk    : {study_params}")
+
     if save_pkl:
         path_relative = os.path.join(SCRIPT_DIR, storage_name)
         if os.path.exists(path_relative):
+            print(f"Loading existing study from {path_relative}")
             study = joblib.load(path_relative)
         else:
             print(f"No existing study found at path {path_relative}. Creating a new one")
             study = optuna.create_study(**study_params)
     else:
+        print(f"Creating study with name {study_name_network} in storage {storage_name}")
         study = optuna.create_study(storage=storage_name, **study_params)
 
     if train_kwargs is None:
@@ -57,6 +61,8 @@ def optimize_hyperparameters(obj_fn: Callable, data_dir: str, study_name: str, n
 
     # only continue training up to n_trials trials total
     current_num_trials = len(study.trials)
+    print(f"Current number of trials: {current_num_trials}")
+
     remaining_trials = n_trials-current_num_trials
 
     study.optimize(functools.partial(objective_fn, data_dir=data_dir, batch_size=batch_size, **train_kwargs),

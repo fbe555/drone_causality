@@ -93,8 +93,11 @@ def train_multiple(obj_fn: Callable, data_dir: str, study_name: str, n_trains: i
         else:
             raise ValueError(f"No study found at {path_relative}")
     elif storage_type == StorageType.RDB:
+        print(f"Loading study {study_name_network} from {storage_name}")
         study = optuna.create_study(storage=storage_name, study_name=study_name_network, load_if_exists=True)
-        best_trial = study.best_trial
+        print(f"Loaded study {study_name_network} from {storage_name}")
+        print(f"study: {study.get_trials()}")
+        # best_trial = study.best_trial
     elif storage_type == StorageType.JSON:
         with open(path_relative, "r") as f:
             params = json.load(f)

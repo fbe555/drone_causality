@@ -47,7 +47,10 @@ def get_output_normalization(root):
     else:
         output_stds = np.ones(OUTPUT_DIM)
 
+    print( output_means)
+    print( output_stds)      
     return output_means, output_stds
+
 
 def get_data_dirs_recursively(root):
     """ Get all directories that has a control.csv and a mission_completed.txt file in a folder recursively  """
@@ -79,6 +82,7 @@ def load_dataset_multi(root, image_size, seq_len, shift, stride, label_scale):
     datasets = []
 
     output_means, output_stds = get_output_normalization(root)
+    output_stds = [stds if stds != 0.0 else 1.0 for stds in output_stds]
 
     for (run_number, d) in tqdm(enumerate(dirs)):
         labels = np.genfromtxt(os.path.join(d, 'control.csv'), delimiter=',', skip_header=1)
@@ -92,7 +96,6 @@ def load_dataset_multi(root, image_size, seq_len, shift, stride, label_scale):
         else:
             raise Exception(f'Wrong size of input data (expected {OUTPUT_DIM}, got {labels.shape[1]:d}')
         labels_dataset = tf.data.Dataset.from_tensor_slices(labels)
-        
         dataset_np = np.empty((len(timestamps), *image_size), dtype=np.uint8)
         for ix, ts in enumerate(timestamps):
             if not os.path.exists(os.path.join(d, reshaped_img_filename(ts))):

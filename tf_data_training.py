@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import List, Dict, Any
 import pickle as pkl
-import pandas as pd
+#import pandas as pd
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -237,5 +237,5 @@ if __name__ == "__main__":
                           model_params=model_params_constructed, decay_rate=args.decay_rate)
     
     # Save model and history
-    pd.DataFrame(hist.history).to_csv(f"history_{t}.csv")
+    #pd.DataFrame(hist.history).to_csv(f"history_{t}.csv")
     model.save(f"model_{t}.keras")
