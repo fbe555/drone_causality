@@ -11,3 +11,6 @@ Note: This had issues, which might not have happened with an even smaller batch 
 
 ## Training:
 python tf_data_training.py --model ncp --data_dir training_data --epochs 100 --seq_len 64 --data_stride 1 --data_shift 16
+
+## Generate visual backprop:
+python visualization_runner.py visualize_each training_data model_checkpoint

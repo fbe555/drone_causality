@@ -12,7 +12,7 @@ from utils.vis_utils import run_visualization, write_video, parse_params_json
 from analysis.visual_backprop import get_conv_head, compute_visualbackprop
 from hyperparameter_tuning import parse_unknown_args
 from utils.model_utils import NCPParams, LSTMParams, CTRNNParams, get_readable_name, TCNParams, ModelParams, \
-    load_model_from_weights
+    load_model_from_weights, load_model_no_params
 
 
 class VisualizationType(Enum):
@@ -44,11 +44,12 @@ def get_vis_models(vis_type: VisualizationType, model_path: str, model_params: M
     else:
         raise ValueError("Illegal vis type")
 
-    control_params = copy.deepcopy(model_params)
+    #control_params = copy.deepcopy(model_params)
     # model params already has single step true, set again for redundancy
-    control_params.single_step = True
-    control_params.no_norm_layer = False
-    control_model = load_model_from_weights(control_params, model_path)
+    #control_params.single_step = True
+    #control_params.no_norm_layer = False
+    #control_model = load_model_from_weights(control_params, model_path)
+    control_model = load_model_no_params(model_path, True)
 
     return vis_model, vis_func, control_model
 
@@ -77,11 +78,21 @@ def visualize_each(datasets: Dict[str, Tuple[str, bool]], output_prefix: str = "
     if vis_kwargs is None:
         vis_kwargs = {}
 
-    for local_path, model_path, model_params in parse_params_json(params_path):
-        net_name = get_readable_name(model_params)
-        for dataset_name, (data_path, reverse_channels, csv_path) in datasets.items():
+    datasets = [('training_data/data/144_256_img_1716584672403552768', 'model_checkpoints/model-ncp_seq-64_lr-0.001000_epoch-008_val-loss-0.3324_train-loss-0.4107_mse-0.4107_20240530140020.hdf5', None),
+                ('training_data/data/144_256_img_1716584672403552768', 'model_checkpoints/model-ncp_seq-64_lr-0.001000_epoch-100_val-loss-29.8541_train-loss-82.4426_mse-82.4426_20240526233241.hdf5', None)]
+    
+    for i, dataset in enumerate(datasets):
+        for local_path, model_path, model_params in [dataset]:
+            net_name = get_readable_name(model_params)
+            # for dataset_name, (data_path, reverse_channels, csv_path) in datasets.items():
             checkpoint_name = f"_{os.path.splitext(local_path)[0]}" if include_checkpoint_name else ""
-            data_model_id = f"{get_readable_name(model_params)}_{dataset_name}{checkpoint_name}"
+            #data_model_id = f"{get_readable_name(model_params)}_{dataset_name}{checkpoint_name}"
+            data_model_id = f"model_{i}"
+
+            data_path = local_path
+            reverse_channels = False
+            csv_path = None
+
             output_name = os.path.join(output_prefix, data_model_id)
 
             # skip if explicitly only one vis type to be done
@@ -174,8 +185,9 @@ if __name__ == "__main__":
 
     vis_func = locals()[args.vis_func.lower()]
 
-    with open(args.dataset_path, "r") as f:
-        datasets = json.load(f)
+    # with open(args.dataset_path, "r") as f:
+    #     datasets = json.load(f)
+    datasets = None
 
     vis_func(datasets=datasets, output_prefix=args.output_prefix, params_path=args.params_path,
              vis_type=VisualizationType(args.vis_type),
